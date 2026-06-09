@@ -4,7 +4,7 @@ Merge of [yuptoo](https://github.com/RedHatInsights/yuptoo) (QPC upload processo
 
 ## Status
 
-**Phase:** Planning (approved)
+**Phase:** Planning
 
 ## Strategy
 
