@@ -20,11 +20,19 @@ See [docs/Puptoo_Yuptoo_Merge_Proposal.md](docs/Puptoo_Yuptoo_Merge_Proposal.md)
 
 | Document | Description |
 | -------- | ----------- |
-| [Proposal](docs/Puptoo_Yuptoo_Merge_Proposal.md) | Executive summary, architecture, timeline, risk assessment |
-| [Comparison](docs/Puptoo_Yuptoo_Comparison.md) | 16-section side-by-side comparison of both codebases |
-| [Strategy Evaluation](docs/Puptoo_Yuptoo_Merge_Strategy_Evaluation.md) | Three strategies evaluated with weighted scoring |
-| [Architecture Recommendation](docs/Puptoo_Yuptoo_Merge_Recommendation.md) | Module layout, migration plan, testing strategy |
+| **Presentation (Google Slides)** | Stakeholder presentation deck (link TBD after creation) |
+| [Proposal](docs/Puptoo_Yuptoo_Merge_Proposal.md) | Engineering proposal: architecture, timeline, risk assessment, cutover plan |
+| [Comparison](docs/Puptoo_Yuptoo_Comparison.md) | 16-section side-by-side analysis of both codebases |
 | [Implementation Tasks](docs/Puptoo_Yuptoo_Merge_Tasks.md) | 24 JIRA-sized tasks across 4 sprints (70 story points) |
+| [Architecture Diagrams](docs/diagrams/) | Component, data flow, class, and sequence diagrams (Mermaid) |
+| [Slides Draft](docs/Google_Slides_Draft.md) | Slide-by-slide text and speaker notes for building the Google Slides deck |
+
+**Archived** (decision records, kept for reference):
+
+| Document | Description |
+| -------- | ----------- |
+| [Strategy Evaluation](docs/archive/Puptoo_Yuptoo_Merge_Strategy_Evaluation.md) | Three strategies evaluated with weighted scoring (conclusion: Strategy A+) |
+| [Architecture Recommendation](docs/archive/Puptoo_Yuptoo_Merge_Recommendation.md) | Detailed module layout, migration plan, testing strategy |
 
 ## Timeline
 
@@ -47,6 +55,15 @@ The merged service needs a final name. Working name for this repo is `puptoo-yup
 | `puptoo-ng` | PUP II, Next Generation | Generational | Common open-source convention for rearchitected successors |
 
 Final decision deferred until implementation phase. Current preference: **uiup**.
+
+## Proof of Concept
+
+The `poc-skeleton` branch contains a working POC demonstrating the core architectural patterns: handler dispatch, modifier pre-registration, typed exceptions, and DRY Kafka auth. 14 passing tests validate the approach.
+
+```bash
+git checkout poc-skeleton
+PYTHONPATH=src pytest tests/ -v
+```
 
 ## Upstream Repositories
 

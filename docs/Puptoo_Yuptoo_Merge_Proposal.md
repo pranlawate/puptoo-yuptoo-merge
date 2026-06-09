@@ -122,7 +122,7 @@ I evaluated three strategies with weighted scoring across six dimensions:
 | **Pre-register modifiers at startup** | Import and instantiate modifier classes once, not per-host | Yuptoo's current pattern causes O(hosts x modifiers) import overhead. Catastrophic for 10K-host QPC slices |
 | **Keep puptoo's commit-after-processing** | Commit Kafka offset in `finally` block, after processing | Yuptoo commits before processing (at-most-once). Crash during `process_report()` loses the message |
 | **Keep puptoo's hard exit on poll errors** | `os._exit()` on MAXPOLL/session timeout | Forces pod recreation. Yuptoo's `continue` can spin a broken consumer indefinitely |
-| **Migrate to `uv`** | Replace Poetry (puptoo) and Pipfile (yuptoo) with `uv` | Team-preferred tooling. PEP 621 standard metadata |
+| **Migrate to `uv`** | Replace Poetry (puptoo) and Pipfile (yuptoo) with `uv` | Team-preferred tooling. PEP 621 standard metadata. Yuptoo has an upstream `pipenv_to_uv` branch in progress; the merged service will inherit that work where possible |
 
 ---
 
@@ -222,20 +222,20 @@ Each PR is independently deployable. No PR breaks production if merged in isolat
 
 All code is merged and tested in ephemeral before this phase begins. The cutover itself is a sequence of deployment gates, not development work.
 
-| Step | Action | Duration | Gate to proceed |
+| Step | Action | Timeline | Gate to proceed |
 | ---- | ------ | -------- | --------------- |
-| 1 | Deploy merged puptoo to **stage** | Day 1 | Deployment succeeds |
-| 2 | Run IQE tests (both `puptoo` and `foreman-rh-cloud` plugins) | 1-2 days | Both IQE suites pass |
-| 3 | Verify advisor/compliance/malware metrics match baseline | 1-2 days | No regression in error rates or processing latency |
-| 4 | Send QPC test payloads, verify hosts appear in HBI | Same window | QPC end-to-end confirmed |
-| 5 | Deploy merged puptoo to **production** | After stage sign-off | Deployment succeeds |
-| 6 | Monitor production metrics for all service types | 24-48 hours | Error rates stable, QPC hosts ingested |
-| 7 | Scale yuptoo replicas to **0** | After 24h stability | No increase in errors after yuptoo stops |
-| 8 | Monitor `qpc-group` consumer lag | 1-2 weeks | Lag remains at zero (confirms no traffic routed to old group) |
+| 1 | Deploy merged puptoo to **stage** | Stage deployment day | Deployment succeeds |
+| 2 | Run IQE tests (both `puptoo` and `foreman-rh-cloud` plugins) | Stage +1-2 days | Both IQE suites pass |
+| 3 | Verify advisor/compliance/malware metrics match baseline | Stage +1-2 days | No regression in error rates or processing latency |
+| 4 | Send QPC test payloads, verify hosts appear in HBI | Same validation window | QPC end-to-end confirmed |
+| 5 | Deploy merged puptoo to **production** | After stage validation (approx. week 2) | Deployment succeeds |
+| 6 | Monitor production metrics for all service types | Prod +1-2 days | Error rates stable, QPC hosts ingested |
+| 7 | Scale yuptoo replicas to **0** | After prod stability confirmed | No increase in errors after yuptoo stops |
+| 8 | Monitor `qpc-group` consumer lag | Grace period: 1-2 weeks | Lag remains at zero (confirms no traffic routed to old group) |
 | 9 | Remove yuptoo ClowdApp from app-interface | After grace period | Sign-off from team |
-| 10 | Archive yuptoo repository | Same day | README updated with redirect |
+| 10 | Archive yuptoo repository | Same milestone | README updated with redirect |
 
-**Total cutover window:** approximately 3-4 weeks from stage deployment to repository archival. Steps 1-4 (stage) take roughly one week. Steps 5-7 (production) take 2-3 days. Steps 8-10 (grace period) take 1-2 weeks.
+**Total cutover window:** approximately 3-4 weeks from stage deployment to repository archival. Steps 1-4 (stage validation) take roughly one week. Steps 5-7 (production) take 2-3 days. Steps 8-10 (grace period) take 1-2 weeks. All timelines are milestone-driven: we do not advance until the gate criteria are met.
 
 ### Rollback
 

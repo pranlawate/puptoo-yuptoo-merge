@@ -355,7 +355,7 @@ Port all yuptoo tests into `tests/qpc/`. Update imports to use puptoo's package 
 **Type:** Story
 **Points:** 3
 **Description:**
-Migrate puptoo's dependency management from Poetry to `uv` (team-preferred tooling). Remove `poetry.lock` and Poetry-specific config from `pyproject.toml`. Add any yuptoo dependencies not already present (`pytest-cov` dev dependency, align `requests` version). Verify `insights-core` 3.7.6 (puptoo's version) is compatible with yuptoo's code. Update the Dockerfile to use `uv` for installs.
+Migrate puptoo's dependency management from Poetry to `uv` (team-preferred tooling). Yuptoo has an upstream `pipenv_to_uv` branch in progress; leverage that work where possible. Remove `poetry.lock` and Poetry-specific config from `pyproject.toml`. Add any yuptoo dependencies not already present (`pytest-cov` dev dependency, align `requests` version). Verify `insights-core` 3.7.6 (puptoo's version) is compatible with yuptoo's code. Update the Dockerfile to use `uv` for installs.
 
 **Acceptance Criteria:**
 - [ ] `pyproject.toml` uses standard PEP 621 metadata (no `[tool.poetry]` section)
