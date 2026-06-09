@@ -20,7 +20,7 @@ See [docs/Puptoo_Yuptoo_Merge_Proposal.md](docs/Puptoo_Yuptoo_Merge_Proposal.md)
 
 | Document | Description |
 | -------- | ----------- |
-| **Presentation (Google Slides)** | Stakeholder presentation deck (link TBD after creation) |
+| **[Presentation (Google Slides)](https://docs.google.com/presentation/d/1TOqGv-49O1DcKl1hcW0Z_NXtttQ0uk26m0LmIFy0nfU/edit?usp=sharing)** | Stakeholder presentation deck |
 | [Proposal](docs/Puptoo_Yuptoo_Merge_Proposal.md) | Engineering proposal: architecture, timeline, risk assessment, cutover plan |
 | [Comparison](docs/Puptoo_Yuptoo_Comparison.md) | 16-section side-by-side analysis of both codebases |
 | [Implementation Tasks](docs/Puptoo_Yuptoo_Merge_Tasks.md) | 24 JIRA-sized tasks across 4 sprints (70 story points) |

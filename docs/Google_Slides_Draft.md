@@ -1,6 +1,8 @@
 # Google Slides Draft: Unified Upload Processor
 
-Use this document to build your Google Slides deck. Each section is one slide. Copy the content, then paste rendered diagrams as images.
+**Live deck:** [Google Slides](https://docs.google.com/presentation/d/1TOqGv-49O1DcKl1hcW0Z_NXtttQ0uk26m0LmIFy0nfU/edit?usp=sharing)
+
+Use this document as the source of truth for slide content. Each section is one slide.
 
 **To render Mermaid diagrams as PNG:** Go to [mermaid.live](https://mermaid.live), paste the Mermaid code, download as PNG, insert into slide.
 
@@ -40,13 +42,11 @@ Use this document to build your Google Slides deck. Each section is one slide. C
 
 **Title:** The Cost of Running Two
 
-| Area | Impact |
-|---|---|
-| **Infrastructure** | 2 ClowdApp manifests, 2 CI/CD pipelines, 2 Konflux configs, 2 consumer groups |
-| **Monitoring** | 2 dashboards, 2 alert sets, 2 pager entries |
-| **On-call** | Context-switching between two codebases for the same function |
-| **Dependencies** | 2 lockfiles with diverging versions of confluent-kafka, insights-core |
-| **Knowledge silos** | Improvements in one codebase are not shared with the other |
+- **Infrastructure:** 2 ClowdApp manifests, 2 CI/CD pipelines, 2 Konflux configs, 2 consumer groups
+- **Monitoring:** 2 dashboards, 2 alert sets, 2 pager entries
+- **On-call:** Context-switching between two codebases for the same function
+- **Dependencies:** 2 lockfiles with diverging versions of confluent-kafka, insights-core
+- **Knowledge silos:** Improvements in one codebase are not shared with the other
 
 **Call-out:** "Yuptoo has superior Kafka auth config that puptoo duplicates inline. Puptoo has safer commit semantics that yuptoo lacks. Neither benefits from the other."
 
@@ -58,36 +58,30 @@ Use this document to build your Google Slides deck. Each section is one slide. C
 
 **Title:** Architecture: As-Is
 
-**Content:** Insert PNG rendered from this Mermaid:
+**Content:** Insert PNG rendered from this Mermaid (paste into [mermaid.live](https://mermaid.live), download as PNG):
 
 ```mermaid
-flowchart TB
-    subgraph input["Kafka Input"]
-        announce["platform.upload.announce"]
-    end
-    subgraph puptoo_svc["insights-puptoo (8 replicas)"]
-        cg_puptoo["Consumer Group: insights-puptoo"]
-        handlers_p["Handlers: advisor, compliance, malware"]
-        redis_p["Redis (retry)"]
-        minio_p["S3 (yum_updates)"]
-    end
-    subgraph yuptoo_svc["yuptoo (1 replica)"]
-        cg_yuptoo["Consumer Group: yuptoo"]
-        handlers_y["Handler: qpc"]
-    end
-    subgraph output["Kafka Output"]
-        host_ingress["host-ingress"]
-        payload_status["payload-status"]
-        validation["validation"]
-    end
-    hbi["Host Inventory (HBI)"]
-    announce --> cg_puptoo
-    announce --> cg_yuptoo
-    cg_puptoo --> handlers_p
-    cg_yuptoo --> handlers_y
-    handlers_p --> host_ingress
-    handlers_y --> host_ingress
-    host_ingress --> hbi
+architecture-beta
+    group kafka_in(cloud)[Kafka Input]
+    group puptoo_svc(server)[Puptoo 8 pods]
+    group yuptoo_svc(server)[Yuptoo 1 pod]
+    group kafka_out(cloud)[Kafka Output]
+
+    service announce(disk)[Announce Topic] in kafka_in
+    service handlers_p(server)[Advisor Compliance Malware] in puptoo_svc
+    service redis_p(database)[Redis] in puptoo_svc
+    service handlers_y(server)[QPC Handler] in yuptoo_svc
+    service hi(disk)[Host Ingress] in kafka_out
+    service ps(disk)[Payload Status] in kafka_out
+    service hbi(server)[Host Inventory]
+
+    announce:R --> L:handlers_y
+    announce:B --> T:handlers_p
+    handlers_p:B -- T:redis_p
+    handlers_p:R --> L:hi
+    handlers_y:B --> T:hi
+    hi:R --> L:hbi
+    hi:B -- T:ps
 ```
 
 > **Speaker notes:** Here is the current architecture. Two separate services, each with their own consumer group, consuming from the same Kafka topic and producing to the same output topics. The duplication is visible.
@@ -98,35 +92,31 @@ flowchart TB
 
 **Title:** The Proposal: One Service, All Upload Types
 
-**Content:** Insert PNG rendered from this Mermaid:
+**Content:** Insert PNG rendered from this Mermaid (paste into [mermaid.live](https://mermaid.live), download as PNG):
 
 ```mermaid
-flowchart TB
-    subgraph input["Kafka Input"]
-        announce["platform.upload.announce"]
-    end
-    subgraph unified["insights-puptoo unified (8+ replicas)"]
-        cg["Consumer Group: insights-puptoo"]
-        dispatch["Handler Dispatch"]
-        h_advisor["AdvisorHandler"]
-        h_compliance["ComplianceHandler"]
-        h_qpc["QPCHandler"]
-        shared["Shared: auth, produce, retry, metrics"]
-    end
-    subgraph output["Kafka Output"]
-        host_ingress["host-ingress"]
-        payload_status["payload-status"]
-        validation["validation"]
-    end
-    hbi["Host Inventory (HBI)"]
-    announce --> cg --> dispatch
-    dispatch --> h_advisor
-    dispatch --> h_compliance
-    dispatch --> h_qpc
-    h_advisor --> host_ingress
-    h_compliance --> host_ingress
-    h_qpc --> host_ingress
-    host_ingress --> hbi
+architecture-beta
+    group kafka_in(cloud)[Kafka Input]
+    group unified(server)[Unified Puptoo 8 pods]
+    group kafka_out(cloud)[Kafka Output]
+
+    service announce(disk)[Announce Topic] in kafka_in
+    service dispatch(server)[Handler Dispatch] in unified
+    service h_adv(server)[AdvisorHandler] in unified
+    service h_qpc(server)[QPCHandler] in unified
+    service redis_u(database)[Redis] in unified
+    service hi(disk)[Host Ingress] in kafka_out
+    service ps(disk)[Payload Status] in kafka_out
+    service hbi(server)[Host Inventory]
+
+    announce:R --> L:dispatch
+    dispatch:R --> L:h_adv
+    h_adv:B --> T:h_qpc
+    redis_u:T -- B:dispatch
+    h_adv:R --> L:hi
+    h_qpc:R --> L:hi
+    hi:R --> L:hbi
+    hi:B -- T:ps
 ```
 
 > **Speaker notes:** The unified architecture. One consumer group, one deployment, one dashboard. The handler dispatch routes each message to the correct handler. Adding a new upload type means adding one handler class. No structural changes.
@@ -137,16 +127,19 @@ flowchart TB
 
 **Title:** Not Just a Merge: 12 Bug Fixes + Architecture Upgrades
 
-| Improvement | Source | Impact |
-|---|---|---|
-| Handler dispatch pattern | New | Replaces 314-line monolithic function |
-| DRY Kafka auth config | From yuptoo | Eliminates duplicated SASL/SSL config |
-| Typed exception hierarchy | New | Replaces bare `Exception` everywhere |
-| Modifier pre-registration | Fix to yuptoo | Fixes O(hosts x modifiers) import overhead |
-| At-least-once commit | From puptoo | Fixes yuptoo's commit-before-processing bug |
-| 7 puptoo bug fixes | Analysis | Swapped args, dead code, bare excepts |
-| 5 yuptoo bug fixes | Analysis | Missing timeouts, ABC mismatch |
-| `uv` migration | Team pref | Upstream yuptoo branch in progress; puptoo on Poetry |
+**Architecture upgrades:**
+- Handler dispatch pattern (replaces 314-line monolithic function)
+- DRY Kafka auth config (adopted from yuptoo)
+- Typed exception hierarchy (replaces bare `Exception`)
+
+**Bug fixes (12 total):**
+- At-least-once commit semantics (fixes yuptoo's commit-before-processing)
+- Modifier pre-registration (fixes O(hosts x modifiers) import overhead)
+- 7 puptoo fixes (swapped args, dead code, bare excepts)
+- 5 yuptoo fixes (missing timeouts, ABC mismatch)
+
+**Dependency cleanup:**
+- `uv` migration (upstream yuptoo branch in progress; puptoo on Poetry)
 
 > **Speaker notes:** This is not a naive code port. I am adopting the best pattern from each codebase. DRY Kafka auth from yuptoo. At-least-once commit from puptoo. Handler dispatch and typed exceptions are new. I identified 12 bugs across both codebases that get fixed as part of this work. The uv migration for yuptoo is already in progress upstream.
 
@@ -201,9 +194,9 @@ flowchart TB
 
 ---
 
-## Slide 10: Sprint Plan and Timeline
+## Slide 10: Sprint Plan
 
-**Title:** Effort and Timeline
+**Title:** Effort Estimate
 
 | Sprint | Focus | Points |
 |---|---|---|
@@ -212,58 +205,28 @@ flowchart TB
 | 4 | Stage/prod deployment, cutover, decommission | 13 |
 | **Total** | | **70** |
 
-**Cutover milestones:**
-
-| Milestone | Gate |
-|---|---|
-| Stage deployment | Deployment succeeds |
-| Stage validation (+1-2 days) | IQE suites pass, no metric regression |
-| Prod deployment (after stage sign-off) | Deployment succeeds |
-| Prod monitoring (+1-2 days) | Error rates stable |
-| Grace period (1-2 weeks) | yuptoo scaled to 0, zero consumer lag |
-| Decommission | Team sign-off, archive repo |
-
-> **Speaker notes:** 70 story points across 4 sprints. Sprint 1 is puptoo refactoring. Sprints 2-3 are QPC porting. Sprint 4 is deployment. The cutover is milestone-driven, not date-driven. We do not advance until gate criteria are met.
+> **Speaker notes:** 70 story points across 4 sprints. Sprint 1 is puptoo refactoring. Sprints 2-3 are QPC porting. Sprint 4 is deployment and cutover.
 
 ---
 
-## Slide 11: Resources Needed
+## Slide 11: Cutover Milestones
 
-**Title:** What I Need
+**Title:** Cutover Timeline
 
-**People:**
+1. **Stage deployment** — deployment succeeds
+2. **Stage validation** (+1-2 days) — IQE suites pass, no metric regression
+3. **Prod deployment** (after stage sign-off) — deployment succeeds
+4. **Prod monitoring** (+1-2 days) — error rates stable
+5. **Grace period** (1-2 weeks) — yuptoo scaled to 0, zero consumer lag
+6. **Decommission** — team sign-off, archive repo
 
-| Role | Who | When |
-|---|---|---|
-| Puptoo domain expert | Sourabh | Sprint 1-2 (review) |
-| QPC/yuptoo expert | Current owner | Sprint 2-3 |
-| Platform engineer | App-interface maintainer | Sprint 4 |
+**Key message:** Milestone-driven, not date-driven. We do not advance until gate criteria are met.
 
-**Access:** Ephemeral (Bonfire), Stage deployment, Prometheus/Grafana, yuptoo write access
-
-**Time:** 60-70% sprint capacity (Sprints 1-3), 4-6 hrs reviewer time/sprint
-
-> **Speaker notes:** I need three things. People: a puptoo expert for review, a QPC expert for validation, a platform engineer for cutover. Access: ephemeral and stage environments plus Prometheus. Time: about 60 to 70 percent of my sprint capacity. Reviewer time is modest.
+> **Speaker notes:** The cutover is milestone-driven. Each step has a gate that must pass before we move forward. Rollback is clean at any stage: revert puptoo, re-deploy yuptoo. Both consumer groups can run simultaneously during the transition.
 
 ---
 
-## Slide 12: Delegation
-
-**Title:** Delegation: Building Team Capability
-
-| Work Stream | Delegated To | What They Gain |
-|---|---|---|
-| Handler extraction review | Sourabh | Deep puptoo understanding |
-| Modifier porting (pair) | Junior member | Hands-on QPC experience |
-| Test suite porting | Team member | Both-codebase familiarity |
-| Dashboard consolidation | SRE member | Monitoring ownership |
-| Yuptoo archival | Team member | App-interface lifecycle |
-
-> **Speaker notes:** This merge is also an enablement opportunity. Pair programming on modifier porting gives a junior engineer real experience. Test porting builds codebase familiarity. Dashboard consolidation gives SRE ownership. Code reviews on every PR ensure no single point of knowledge failure.
-
----
-
-## Slide 13: Discussion
+## Slide 12: Discussion
 
 **Title:** Discussion and Next Steps
 
@@ -273,7 +236,7 @@ flowchart TB
 3. Does the sprint plan align with team priorities?
 4. Who should own the QPC/yuptoo expert role?
 
-**Supporting materials:** Full proposal, comparison, and 24 JIRA-sized tasks in the GitHub repo. POC with 14 tests on `poc-skeleton` branch.
+**Repo:** [github.com/pranlawate/puptoo-yuptoo-merge](https://github.com/pranlawate/puptoo-yuptoo-merge) (proposal, comparison, 24 JIRA-sized tasks, POC on `poc-skeleton` branch)
 
 **Next step if approved:** Create JIRA epic, begin Sprint 1.
 
