@@ -56,15 +56,6 @@ The merged service needs a final name. Working name for this repo is `puptoo-yup
 
 Final decision deferred until implementation phase. Current preference: **uiup**.
 
-## Proof of Concept
-
-The `poc-skeleton` branch contains a working POC demonstrating the core architectural patterns: handler dispatch, modifier pre-registration, typed exceptions, and DRY Kafka auth. 14 passing tests validate the approach.
-
-```bash
-git checkout poc-skeleton
-PYTHONPATH=src pytest tests/ -v
-```
-
 ## Upstream Repositories
 
 - [RedHatInsights/insights-puptoo](https://github.com/RedHatInsights/insights-puptoo)

@@ -236,8 +236,8 @@ architecture-beta
 3. Does the sprint plan align with team priorities?
 4. Who should own the QPC/yuptoo expert role?
 
-**Repo:** [github.com/pranlawate/puptoo-yuptoo-merge](https://github.com/pranlawate/puptoo-yuptoo-merge) (proposal, comparison, 24 JIRA-sized tasks, POC on `poc-skeleton` branch)
+**Repo:** [github.com/pranlawate/puptoo-yuptoo-merge](https://github.com/pranlawate/puptoo-yuptoo-merge) (proposal, comparison, 24 JIRA-sized tasks)
 
 **Next step if approved:** Create JIRA epic, begin Sprint 1.
 
-> **Speaker notes:** I would like to open it up for discussion. The full proposal, comparison, and tasks are in the GitHub repo. The POC demonstrates the core patterns with 14 passing tests. If we align today, the next step is creating the JIRA epic.
+> **Speaker notes:** I would like to open it up for discussion. The full proposal, comparison, and tasks are in the GitHub repo. If we align today, the next step is creating the JIRA epic.
