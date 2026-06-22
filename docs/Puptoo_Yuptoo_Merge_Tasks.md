@@ -541,3 +541,11 @@ The merged service handler dispatch must route produce calls to the correct topi
 ### IQE Plugin Co-location
 
 The yuptoo IQE plugin lives at `gitlab.cee.redhat.com/insights-qe/iqe-foreman-rh-cloud-plugin`. Consider migrating IQE plugins into the merged repo (as HBI did) for tighter integration. This is optional but recommended by the project sponsor (Ondrej). If pursued, add as a Sprint 4 task.
+
+### `uv` Migration: Decouple from Merge
+
+Task 2.9 (migrate to `uv`) should be a **separate effort**, done before or after the merge, not during. Getting both repos as similar as possible before porting reduces merge risk. Track as an independent JIRA outside this Epic. (Agreed: Gael + Pranav, Jun 22)
+
+### HBI Reporter Name Change
+
+The merged service's reporter name is part of the `host_events` spec in Host Inventory (HBI). Renaming the service (from "puptoo"/"yuptoo" to the new name) will require corresponding changes in HBI itself. Add as a Sprint 4 subtask under Task 3.1 (deployment manifest) or as a separate cross-team story.
