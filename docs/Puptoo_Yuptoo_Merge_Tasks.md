@@ -533,7 +533,7 @@ The two services write to **different** HBI ingress topics:
 
 | Service | Config variable | Actual topic |
 |---------|----------------|--------------|
-| Puptoo | `INVENTORY_TOPIC` | `host-ingress-p1` |
+| Puptoo | `INVENTORY_TOPIC` | `platform.inventory.host-ingress-p1` |
 | Yuptoo | `UPLOAD_TOPIC` | `platform.inventory.host-ingress` |
 
 The merged service handler dispatch must route produce calls to the correct topic based on handler type (advisor/compliance/malware vs qpc). This should be addressed in the QPCHandler task (2.6) or as a separate sub-task.
