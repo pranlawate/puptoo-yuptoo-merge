@@ -2,8 +2,10 @@
 
 **Author:** Pranav Lawate
 **Date:** June 2026
-**Status:** Proposed
-**Audience:** insights-puptoo and yuptoo maintainers, Insights Foundry team
+**Status:** Kickoff (Jun 22, 2026)
+**Epic:** [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899)
+**ADR:** [GitLab MR #13](https://gitlab.cee.redhat.com/insights-platform/architecture/-/merge_requests/13)
+**Audience:** insights-puptoo and yuptoo maintainers, Insights-Framework team
 
 ---
 

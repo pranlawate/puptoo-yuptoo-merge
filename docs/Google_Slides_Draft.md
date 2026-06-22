@@ -14,7 +14,7 @@ Use this document as the source of truth for slide content. Each section is one 
 
 **Subtitle:** Merging yuptoo into insights-puptoo
 
-**Bottom:** Pranav Lawate | Insights Foundry | June 2026
+**Bottom:** Pranav Lawate | Insights-Framework | June 2026
 
 > **Speaker notes:** Welcome everyone. I have been working on a proposal to merge our two upload processor services into one. This meeting is to share the approach, get your feedback, and align on timeline and resources.
 
@@ -30,7 +30,7 @@ Use this document as the source of truth for slide content. Each section is one 
 | **Replicas** | 8 | 1 |
 | **Input** | platform.upload.announce | platform.upload.announce |
 | **Output** | host-ingress, payload-status, validation | host-ingress, payload-status, validation |
-| **Maintainer** | Insights Foundry | Insights Foundry |
+| **Maintainer** | Insights-Framework | Insights-Framework |
 
 **Key message:** Same input topic. Same output topics. Same downstream consumer (HBI). Same team.
 
@@ -135,8 +135,8 @@ architecture-beta
 **Bug fixes (12 total):**
 - At-least-once commit semantics (fixes yuptoo's commit-before-processing)
 - Modifier pre-registration (fixes O(hosts x modifiers) import overhead)
-- 7 puptoo fixes (swapped args, dead code, bare excepts)
-- 5 yuptoo fixes (missing timeouts, ABC mismatch)
+- 6 puptoo fixes (swapped args, dead code, bare excepts, boolean parsing, dead metric)
+- 6 yuptoo fixes (missing timeouts, ABC mismatch, no modifier ordering, validation spam)
 
 **Dependency cleanup:**
 - `uv` migration (upstream yuptoo branch in progress; puptoo on Poetry)

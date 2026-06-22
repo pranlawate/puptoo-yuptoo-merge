@@ -4,7 +4,7 @@ Merge of [yuptoo](https://github.com/RedHatInsights/yuptoo) (QPC upload processo
 
 ## Status
 
-**Phase:** Planning
+**Phase:** Kickoff (Jun 22, 2026). JIRA tickets created under [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899). Sprint planning pending.
 
 ## Strategy
 

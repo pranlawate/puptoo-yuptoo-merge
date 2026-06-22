@@ -4,7 +4,7 @@
 
 ---
 
-## Epic: RHINENG-XXXXX — Merge Yuptoo into Puptoo
+## Epic: [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899) — Merge Yuptoo into Puptoo
 
 ---
 
@@ -522,3 +522,22 @@ Sprint 4:
 3.1 ──► 3.2 ──► 3.3 ──► 3.4 ──► 3.5
                               └──► 3.6
 ```
+
+---
+
+## Implementation Notes
+
+### Kafka Topic Routing
+
+The two services write to **different** HBI ingress topics:
+
+| Service | Config variable | Actual topic |
+|---------|----------------|--------------|
+| Puptoo | `INVENTORY_TOPIC` | `host-ingress-p1` |
+| Yuptoo | `UPLOAD_TOPIC` | `platform.inventory.host-ingress` |
+
+The merged service handler dispatch must route produce calls to the correct topic based on handler type (advisor/compliance/malware vs qpc). This should be addressed in the QPCHandler task (2.6) or as a separate sub-task.
+
+### IQE Plugin Co-location
+
+The yuptoo IQE plugin lives at `gitlab.cee.redhat.com/insights-qe/iqe-foreman-rh-cloud-plugin`. Consider migrating IQE plugins into the merged repo (as HBI did) for tighter integration. This is optional but recommended by the project sponsor (Ondrej). If pursued, add as a Sprint 4 task.

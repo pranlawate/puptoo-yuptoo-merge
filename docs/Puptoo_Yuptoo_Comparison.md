@@ -72,7 +72,7 @@
 | Auth helper          | Inline in consumer/producer                         | `kafka_auth_config()` function                       |
 | S3/MinIO config      | Yes (`BUCKET_NAME`, `S3_ENDPOINT`, keys)            | No (no object store)                                 |
 | Redis config         | Yes (`REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`)  | No                                                   |
-| HBI topic name       | `INVENTORY_TOPIC`                                   | `UPLOAD_TOPIC`                                       |
+| HBI topic name       | `INVENTORY_TOPIC` (`host-ingress-p1`)               | `UPLOAD_TOPIC` (`platform.inventory.host-ingress`)   |
 | Metrics port default | 8000 (legacy) / Clowder metricsPort                 | 5005 (legacy) / Clowder metricsPort                  |
 | `log_config()`       | Yes, logs all uppercase module vars                  | No equivalent                                        |
 | Max hosts per report  | N/A                                                 | `MAX_HOSTS_PER_REP` (10000)                          |
