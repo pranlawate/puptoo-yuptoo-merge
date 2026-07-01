@@ -218,6 +218,44 @@ Each PR is independently deployable. No PR breaks production if merged in isolat
 
 ---
 
+## Deployment Architecture
+
+The merged service runs as **multiple deployments of the same container image**, each configured to handle a subset of service types via the `ENABLED_HANDLERS` environment variable. This preserves existing Kafka consumer group topology and scaling boundaries.
+
+```
+                platform.upload.announce (64 partitions)
+                              │
+           ┌──────────────────┴──────────────────┐
+           │                                     │
+  Consumer group: puptoo-processor     Consumer group: qpc-group
+           │                                     │
+  ┌────────┴────────┐                   ┌────────┴────────┐
+  │ Puptoo Deploy   │                   │ Yuptoo Deploy   │
+  │ 64 pods         │                   │ 8 pods          │
+  │ ENABLED_HANDLERS│                   │ ENABLED_HANDLERS│
+  │ =advisor,       │                   │ =qpc            │
+  │  compliance,    │                   │                 │
+  │  malware-detect │                   │                 │
+  └─────────────────┘                   └─────────────────┘
+         │                                       │
+    Same container image              Same container image
+    (insights-puptoo:latest)          (insights-puptoo:latest)
+```
+
+**Why multi-deployment:**
+- `platform.upload.announce` has 64 partitions. Kafka limits consumers per consumer group to the partition count
+- Puptoo already uses 64 pods (one per partition) and has experienced lagging at this ceiling
+- Combining both workloads into a single 64-pod consumer group would reduce effective capacity from 72 to 64 consumers
+- Multi-deployment preserves the current 72-consumer topology (64 + 8) using separate consumer groups
+
+**What this means for the merge:**
+- The merge consolidates the **codebase** (one repo, one CI/CD, one CVE cycle, shared improvements), not the deployment topology
+- Each deployment can have independent HPA, resource limits, and `max.poll.interval.ms`
+- Handler dispatch via `get_handler()` and `ENABLED_HANDLERS` env var filter traffic at startup
+- A pod configured with `ENABLED_HANDLERS=qpc` skips non-QPC messages immediately (no processing cost)
+
+---
+
 ## Deployment and Rollback
 
 ### Cutover Timeline
@@ -257,10 +295,11 @@ Both consumer groups (`insights-puptoo` and `qpc-group`) can run simultaneously 
 | ---- | ----------- | ------ | ---------- |
 | Regression in advisor/compliance/malware | Low | High | Handler extraction tested in isolation. 67 existing puptoo tests provide coverage. Verified in ephemeral before stage |
 | QPC processing fails in merged service | Medium | Medium | Yuptoo remains deployed during testing. Full yuptoo test suite (63 tests) ported and passing before merge |
-| Consumer group transition drops QPC messages | Low | Medium | Both consumer groups run simultaneously during cutover. No messages are lost |
-| Performance impact from QPC's large tars | Low | Medium | `max.poll.interval.ms` (600s) prevents consumer timeout. QPC uses same pod resources |
+| Consumer group transition drops QPC messages | Low | Medium | Consumer groups remain separate (multi-deployment). No transition needed |
+| Performance impact from QPC's large tars | Very Low | Low | QPC runs in its own deployment (8 pods) with independent resource limits. Puptoo pods never process QPC traffic |
 | Modifier behavior differs after porting | Low | Low | All 11 modifier tests ported with original test data. Per-host output verified |
 | `insights-core` version conflict | Very Low | Low | Both use ~3.7.x. Merged service uses puptoo's 3.7.6 (newer and compatible) |
+| Multi-deployment config drift | Low | Medium | Single container image built from one CI pipeline. Deployment config lives in app-interface (reviewed). Only env vars differ |
 
 ---
 
@@ -270,9 +309,9 @@ Both consumer groups (`insights-puptoo` and `qpc-group`) can run simultaneously 
 
 2. **QPC metric naming:** Should ported QPC metrics keep yuptoo's original names (e.g., `archive_downloaded_success`) or be prefixed with `puptoo_qpc_` to avoid dashboard confusion during transition?
 
-3. **Consumer group migration:** When merged puptoo starts consuming `qpc` messages, the `qpc-group` will see lag increase (yuptoo is still running). Preferred approach: stop yuptoo first, or let both consume simultaneously until confidence is established?
+3. ~~**Consumer group migration:**~~ **RESOLVED (Jul 1):** Consumer groups remain separate. Puptoo deployment uses `puptoo-processor`; yuptoo deployment uses `qpc-group`. No migration needed. Both deployments run the same image with different `ENABLED_HANDLERS`.
 
-4. **Resource limits:** Puptoo runs at 100m CPU / 256Mi memory; yuptoo runs at 500m / 1Gi. Combined workload may need a resource bump, especially for QPC's tar processing. Suggested starting point?
+4. ~~**Resource limits:**~~ **RESOLVED (Jul 1):** Each deployment has independent resource limits. Puptoo deployment keeps 100m/256Mi. Yuptoo deployment keeps 500m/1Gi for tar processing. No compromise needed since deployments scale independently.
 
 5. **Modifier ordering:** Yuptoo's `pkgutil.walk_packages` returns filesystem order, which is not deterministic. I propose an explicit ordered list. Does the team have a preferred ordering, or is the current implicit order acceptable as the baseline?
 

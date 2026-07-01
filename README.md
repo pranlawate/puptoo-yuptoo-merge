@@ -1,10 +1,19 @@
 # puptoo-yuptoo-merge
 
-Merge of [yuptoo](https://github.com/RedHatInsights/yuptoo) (QPC upload processor) into [insights-puptoo](https://github.com/RedHatInsights/insights-puptoo) (advisor/compliance/malware upload processor), producing a single unified Kafka consumer for the Insights platform upload pipeline.
+Merge of [yuptoo](https://github.com/RedHatInsights/yuptoo) (QPC upload processor) into [insights-puptoo](https://github.com/RedHatInsights/insights-puptoo) (advisor/compliance/malware upload processor), producing a single codebase deployed as multiple handler-filtered instances for the Insights platform upload pipeline.
 
 ## Status
 
-**Phase:** Kickoff (Jun 22, 2026). JIRA tickets created under [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899). Sprint planning pending.
+**Phase:** Phase 1 in progress (refactoring). Architecture confirmed Jul 1, 2026.
+
+**Deployment model:** Single container image, multiple deployments:
+- **Puptoo deployment:** 64 pods, `ENABLED_HANDLERS=advisor,compliance,malware-detection`, consumer group `puptoo-processor`
+- **Yuptoo deployment:** 8 pods, `ENABLED_HANDLERS=qpc`, consumer group `qpc-group`
+
+Pod topology and Kafka consumer groups remain identical to today. The merge consolidates the codebase, CI/CD, and CVE lifecycle without changing operational scaling.
+
+**JIRA:** [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899)
+**ADR:** [GitLab MR !13](https://gitlab.cee.redhat.com/insights-platform/architecture/-/merge_requests/13)
 
 ## Strategy
 

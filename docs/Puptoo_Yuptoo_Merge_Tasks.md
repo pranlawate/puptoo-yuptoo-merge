@@ -389,22 +389,33 @@ Deploy the merged puptoo (with QPC handler) to a Bonfire ephemeral environment. 
 
 ## Sprint 4: Deployment and Cutover
 
-### Task 3.1: Update ClowdApp deployment manifest
+### Task 3.1: Create multi-deployment app-interface configuration
 
 **Type:** Story
 **Points:** 3
 **Description:**
-Update `deployment.yaml` to include:
-- QPC-specific environment variables (`MAX_HOSTS_PER_REP`, `HOSTS_TRANSFORMATION_ENABLED`, etc.)
-- `KAFKA_CONSUMER_MAXPOLL_INTERVAL` parameter
-- Both IQE test plugins (`puptoo` + `foreman-rh-cloud`)
-- Optional: add `message.max.bytes` for producer if QPC slices can be large
+Create app-interface deployment configurations for the multi-deployment architecture. The merged service runs as two separate Deployments of the same container image, each with distinct `ENABLED_HANDLERS` and consumer group configuration.
+
+**Deployment A (puptoo):**
+- Replicas: 64 (matches current puptoo-processor)
+- `ENABLED_HANDLERS=advisor,compliance,malware-detection`
+- Consumer group: `puptoo-processor` (existing)
+- Resource limits: 100m CPU / 256Mi memory (current puptoo limits)
+- IQE plugin: `puptoo`
+
+**Deployment B (yuptoo):**
+- Replicas: 8 (matches current yuptoo)
+- `ENABLED_HANDLERS=qpc`
+- Consumer group: `qpc-group` (existing)
+- Resource limits: 500m CPU / 1Gi memory (current yuptoo limits)
+- IQE plugin: `foreman-rh-cloud`
 
 **Acceptance Criteria:**
-- [ ] All QPC config parameters present with defaults
-- [ ] Both IQE plugins configured
+- [ ] Two ClowdApp Deployment entries in app-interface using the same image tag
+- [ ] Each deployment has correct `ENABLED_HANDLERS`, consumer group, and resource limits
+- [ ] Both IQE test plugins mapped to their respective deployments
 - [ ] Manifest validates without errors
-- [ ] Resource limits reviewed for combined workload (may need increase)
+- [ ] HPA configuration independent per deployment
 
 ---
 
