@@ -1,5 +1,7 @@
 # UML Class Diagram: Handlers and Modifiers
 
+> **Living diagram, last verified against code: 2026-08-05.** `BaseHandler`, `AdvisorHandler`, `ComplianceHandler` confirmed present in `insights-puptoo` (Phase 1 complete). `QPCHandler` and the modifier classes below are planned, not yet built, Phase 2 work. Re-verify once Phase 2 lands.
+
 Handler hierarchy for service-type dispatch and QPC report transformation via the modifier pipeline.
 
 ```mermaid

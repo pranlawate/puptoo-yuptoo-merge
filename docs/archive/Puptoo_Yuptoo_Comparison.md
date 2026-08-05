@@ -2,6 +2,9 @@
 
 > Detailed comparison for evaluating merge strategy. Both services consume from the same Kafka topic, produce to the same downstream topics, and send hosts to HBI. They differ in what they process and how they transform data.
 
+> [!note] Historical document (frozen)
+> This was the initial codebase study used to choose a merge strategy (June 2026). It reflects the codebases as they stood at that time and is not updated as the merge progresses. For current status, see [README.md](../../README.md) or JIRA epic [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899).
+
 ---
 
 ## 1. Purpose and Service Routing

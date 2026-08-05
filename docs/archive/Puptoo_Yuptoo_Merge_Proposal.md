@@ -7,6 +7,9 @@
 **ADR:** [GitLab MR #13](https://gitlab.cee.redhat.com/insights-platform/architecture/-/merge_requests/13)
 **Audience:** insights-puptoo and yuptoo maintainers, Insights-Framework team
 
+> [!note] Historical document (frozen)
+> This proposal served its purpose: getting stakeholders onboarded and the ADR (RHINENG's ADR-0009) approved in June 2026. It is kept as-is for reference and is not updated as the project evolves. For current status, see [README.md](../../README.md) and [Implementation Tasks](../Puptoo_Yuptoo_Merge_Tasks.md), or JIRA epic [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899).
+
 ---
 
 ## Executive Summary
@@ -326,4 +329,4 @@ Detailed analysis backing this proposal:
 - **[Puptoo vs Yuptoo Comparison](Puptoo_Yuptoo_Comparison.md)**: 16-section side-by-side comparison of both codebases
 - **[Merge Strategy Evaluation](Puptoo_Yuptoo_Merge_Strategy_Evaluation.md)**: Three strategies evaluated with weighted scoring
 - **[Architecture Recommendation](Puptoo_Yuptoo_Merge_Recommendation.md)**: Full architecture recommendation with module layout, migration plan, and testing strategy
-- **[Implementation Tasks](Puptoo_Yuptoo_Merge_Tasks.md)**: 24 JIRA-sized tasks across 4 sprints with acceptance criteria and dependency graph
+- **[Implementation Tasks](../Puptoo_Yuptoo_Merge_Tasks.md)**: 24 JIRA-sized tasks across 4 sprints with acceptance criteria and dependency graph

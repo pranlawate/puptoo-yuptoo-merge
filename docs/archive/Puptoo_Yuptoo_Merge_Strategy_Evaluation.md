@@ -2,6 +2,9 @@
 
 > Evaluation of three merge strategies based on the [Comparison](Puptoo_Yuptoo_Comparison.md) analysis. Each option is assessed across seven dimensions: effort, risk, architecture quality, operational impact, testing, team familiarity, and long-term maintainability.
 
+> [!note] Historical document (frozen)
+> This decision record concluded Strategy A+ was the right approach (June 2026); that conclusion held and shaped everything since. Kept as-is for reference, not updated further. For current status, see [README.md](../../README.md) or JIRA epic [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899).
+
 ---
 
 ## Strategy A: Merge Yuptoo into Puptoo

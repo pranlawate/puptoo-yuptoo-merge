@@ -2,7 +2,8 @@
 
 Investigation into how `yupana`, `puptoo`, and `yuptoo` names are embedded across codebases, and the scope of renaming them after the merge.
 
-> **Decision Needed:** Should the merged service adopt a clean new reporter name, or keep existing names for backward compatibility? Review Scenarios A, B, and C before creating JIRA work.
+> [!note] Historical document (frozen) — decision resolved
+> **Resolved 2026-07-14: Scenario A** (keep existing reporter names, `puptoo`/`yuptoo` stay as-is). No HBI changes needed. This document is kept as-is for reference on how the decision was reached; it is not updated further. See the "HBI Reporter Name" section of [Implementation Tasks](../Puptoo_Yuptoo_Merge_Tasks.md) or JIRA epic [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899) for the live record.
 
 ---
 
@@ -160,6 +161,6 @@ Change the **reporter name** only. Leave the facts namespace as `yupana` (histor
 ## Related
 
 - [Merge Proposal](Puptoo_Yuptoo_Merge_Proposal.md)
-- [Task Breakdown](Puptoo_Yuptoo_Merge_Tasks.md)
+- [Task Breakdown](../Puptoo_Yuptoo_Merge_Tasks.md)
 - [Codebase Comparison](Puptoo_Yuptoo_Comparison.md)
 - JIRA: [RHINENG-27900](https://redhat.atlassian.net/browse/RHINENG-27900) (naming decision)

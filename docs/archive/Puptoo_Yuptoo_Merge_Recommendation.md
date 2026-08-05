@@ -2,6 +2,9 @@
 
 > Based on the [Comparison](Puptoo_Yuptoo_Comparison.md) and [Strategy Evaluation](Puptoo_Yuptoo_Merge_Strategy_Evaluation.md), Strategy A+ (merge yuptoo into puptoo with best-of-both architectural upgrades) is the recommended approach. This document describes the proposed architecture, migration plan, testing strategy, deployment cutover, and risk assessment.
 
+> [!note] Historical document (frozen)
+> The module layout and core architectural decisions here (handler dispatch, typed exceptions, modifier pre-registration) held up and were implemented in Phase 1/2. The **deployment/cutover sections predate the multi-deployment decision** (see [component_diagram.md](../diagrams/component_diagram.md) correction note) and the Jul 20 repo-strategy reversal — for current cutover planning, see [Implementation Tasks](../Puptoo_Yuptoo_Merge_Tasks.md), not this document. Kept as-is for reference, not updated further.
+
 ---
 
 ## Recommended Strategy

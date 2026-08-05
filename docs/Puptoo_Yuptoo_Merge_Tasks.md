@@ -1,538 +1,199 @@
 # Puptoo-Yuptoo Merge: Implementation Tasks
 
-> JIRA-sized tasks for executing Strategy A+ (merge yuptoo into puptoo with best-of-both architectural upgrades) as described in [Architecture Recommendation](Puptoo_Yuptoo_Merge_Recommendation.md). Tasks are grouped by sprint/phase, ordered by dependency, and include acceptance criteria.
+> **Living document, last synced with JIRA: 2026-08-05.** This is the current implementation status for Strategy A+ (merge yuptoo into puptoo, in-place, with a multi-deployment architecture). Unlike the other docs in this repo, this one is kept up to date as the project progresses. If you're reading this and it's been more than a couple of weeks since the sync date above, treat JIRA epic [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899) as the higher-authority source for individual task status.
 
 ---
 
 ## Epic: [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899) — Merge Yuptoo into Puptoo
 
+**Repo strategy:** originally planned to stand up a new repo (`insights-upload-processor`). **Reversed 2026-07-20**: the team merges yuptoo's code directly into the existing [insights-puptoo](https://github.com/RedHatInsights/insights-puptoo) repo, gated by environment variables and Unleash feature flags. `insights-upload-processor` exists on GitHub but stays dormant until a final rename decision (see Phase 3, task 3.8).
+
+**Service name:** decided as "Upload Processor" ([RHINENG-27900](https://redhat.atlassian.net/browse/RHINENG-27900), done). The repo/container image itself keeps the `insights-puptoo` name until the Phase 3 rename.
+
 ---
 
-## Sprint 1: Refactor Puptoo + A+ Infrastructure
+## Phase 1 ([27903](https://redhat.atlassian.net/browse/RHINENG-27903)): Refactor Puptoo + A+ Infrastructure — ✅ Complete (all PRs merged Jul 7, prod released Jul 20)
 
 ### Task 1.1: Create BaseHandler ABC and handler registry
 
-**Type:** Story
-**Points:** 3
-**Description:**
-Create a `handlers/` package in `src/puptoo/` with a `BaseHandler` abstract base class and a registry that maps service header values to handler instances.
+**Type:** Story | **Points:** 3 | **JIRA:** [27904](https://redhat.atlassian.net/browse/RHINENG-27904) | **Status:** Done — [#766](https://github.com/RedHatInsights/insights-puptoo/pull/766)
 
-**Acceptance Criteria:**
-- [ ] `src/puptoo/handlers/__init__.py` exists with `get_handler(service: str) -> BaseHandler | None`
-- [ ] `src/puptoo/handlers/base.py` defines `BaseHandler` ABC with `process(msg, extra)` and `build_hbi_messages(facts, msg)` abstract methods
-- [ ] `get_handler()` returns `None` for unknown service types (no crash)
-- [ ] No functional change to puptoo behaviour
+Create a `handlers/` package in `src/puptoo/` with a `BaseHandler` abstract base class and a registry that maps service header values to handler instances.
 
 ---
 
 ### Task 1.2: Extract AdvisorHandler from app.py
 
-**Type:** Story
-**Points:** 5
-**Description:**
-Move the advisor-specific logic from `handle_message()` in `app.py` into `handlers/advisor.py`. This includes `process_archive()`, insights-core fact extraction, canonical fact validation, MAC cleaning, owner ID extraction, stale timestamp, S3 upload of yum_updates, and display_name/ansible_host override.
+**Type:** Story | **Points:** 5 | **JIRA:** [27905](https://redhat.atlassian.net/browse/RHINENG-27905) | **Status:** Done — [#766](https://github.com/RedHatInsights/insights-puptoo/pull/766)
 
-**Acceptance Criteria:**
-- [ ] `src/puptoo/handlers/advisor.py` contains `AdvisorHandler(BaseHandler)`
-- [ ] `handle_message()` in `app.py` dispatches `advisor` to `AdvisorHandler`
-- [ ] All existing `test_app.py` tests pass without modification
-- [ ] All existing profile extraction tests pass without modification
-- [ ] ROS flags (`is_ros`, `is_ros_v2`, `is_pcp_raw_data_collected`, `is_runtimes`) handled correctly
+Move the advisor-specific logic from `handle_message()` in `app.py` into `handlers/advisor.py`.
 
 ---
 
 ### Task 1.3: Extract ComplianceHandler from app.py
 
-**Type:** Story
-**Points:** 2
-**Description:**
-Move the compliance/malware-detection logic from `handle_message()` into `handlers/compliance.py`. This handler simply forwards `msg["metadata"]` as facts.
+**Type:** Story | **Points:** 2 | **JIRA:** [27906](https://redhat.atlassian.net/browse/RHINENG-27906) | **Status:** Done — [#766](https://github.com/RedHatInsights/insights-puptoo/pull/766)
 
-**Acceptance Criteria:**
-- [ ] `src/puptoo/handlers/compliance.py` contains `ComplianceHandler(BaseHandler)`
-- [ ] Both `compliance` and `malware-detection` service types route to `ComplianceHandler`
-- [ ] Existing tests pass
+Move the compliance/malware-detection logic into `handlers/compliance.py`.
 
 ---
 
 ### Task 1.4: Refactor app.py main loop to use handler dispatch
 
-**Type:** Story
-**Points:** 3
-**Description:**
-Replace the `if service in ['advisor', ...]` chain in `app.py` with a call to `get_handler(service)`. Move tracker messages, validation messages, and error handling into common wrapper logic that calls `handler.process()`.
+**Type:** Story | **Points:** 3 | **JIRA:** [27907](https://redhat.atlassian.net/browse/RHINENG-27907) | **Status:** Done — [#766](https://github.com/RedHatInsights/insights-puptoo/pull/766)
 
-**Acceptance Criteria:**
-- [ ] `app.py` main loop uses `get_handler()` for dispatch
-- [ ] `handle_message()` is simplified to common pre/post logic + handler dispatch
-- [ ] All existing tests pass
-- [ ] `app.py` line count reduced by at least 80 lines
+Replace the `if service in [...]` chain with `get_handler(service)` dispatch.
 
 ---
 
 ### Task 1.5: Create mq/auth.py with kafka_auth_config()
 
-**Type:** Task
-**Points:** 2
-**Description:**
-Create `src/puptoo/mq/auth.py` with a shared `kafka_auth_config(connection_info)` function (adopt yuptoo's `lib/config.py:9-20` pattern). Use it in both `consume.py` and `produce.py` to eliminate duplicated SASL/SSL configuration. Also move cacert writing (`write_cert()` from `app.py`) into this module.
+**Type:** Task | **Points:** 2 | **JIRA:** [27908](https://redhat.atlassian.net/browse/RHINENG-27908) | **Status:** Done — [#775](https://github.com/RedHatInsights/insights-puptoo/pull/775)
 
-**Acceptance Criteria:**
-- [ ] `src/puptoo/mq/auth.py` exists with `kafka_auth_config()` and `write_cert()`
-- [ ] Both `consume.init_consumer()` and `produce.init_producer()` use `kafka_auth_config()`
-- [ ] Duplicated auth blocks removed from `consume.py` and `produce.py`
-- [ ] `write_cert()` removed from `app.py`
-- [ ] Kafka auth behaviour unchanged (SASL, cacert handling)
+Shared `kafka_auth_config()` (adopted from yuptoo's pattern) used by both consumer and producer.
 
 ---
 
 ### Task 1.6: Move send_message() and delivery_report() to mq/produce.py
 
-**Type:** Story
-**Points:** 3
-**Description:**
-Relocate `send_message()`, `delivery_report()`, and the global `producer` variable from `app.py` to `mq/produce.py` (adopt yuptoo's encapsulation pattern). Fix the swapped format args in `delivery_report()`. Add `message.max.bytes` producer config. Add `send_time` histogram to produce module. Create `tests/test_produce.py`.
+**Type:** Story | **Points:** 3 | **JIRA:** [27909](https://redhat.atlassian.net/browse/RHINENG-27909) | **Status:** Done — [#789](https://github.com/RedHatInsights/insights-puptoo/pull/789)
 
-**Acceptance Criteria:**
-- [ ] `send_message()` and `delivery_report()` live in `mq/produce.py`
-- [ ] `delivery_report()` format args corrected: `(topic, request_id, err)`
-- [ ] `message.max.bytes` configurable via `KAFKA_PRODUCER_OVERRIDE_MAX_REQUEST_SIZE`
-- [ ] `app.py` imports `send_message` from `mq.produce`
-- [ ] All existing tests pass
-- [ ] New `tests/test_produce.py` covers send + delivery callback
+Relocated from `app.py`, fixed swapped format args in `delivery_report()`.
 
 ---
 
 ### Task 1.7: Create typed exception hierarchy
 
-**Type:** Story
-**Points:** 2
-**Description:**
-Create `src/puptoo/exceptions.py` with a typed exception hierarchy adopted from yuptoo's `lib/exceptions.py`. Add puptoo-specific types. Replace bare `Exception` raises in `app.py` with appropriate typed exceptions. Fix `handle_retries()` exception formatting.
+**Type:** Story | **Points:** 2 | **JIRA:** [27910](https://redhat.atlassian.net/browse/RHINENG-27910) | **Status:** Done — [#795](https://github.com/RedHatInsights/insights-puptoo/pull/795)
 
-Exception types: `PuptooError` (base), `FailDownloadException`, `FailExtractException`, `QPCKafkaMsgException`, `QPCReportException`, `RetryExhaustedException`.
-
-**Acceptance Criteria:**
-- [ ] `src/puptoo/exceptions.py` exists with full hierarchy
-- [ ] `handle_retries()` raises `RetryExhaustedException` with f-string formatting
-- [ ] Bare `Exception` in `app.py` replaced where appropriate
-- [ ] Bare `except:` in `upload.py` and `config.py` replaced with specific types
+`src/puptoo/exceptions.py` with `PuptooError`, `FailDownloadException`, `FailExtractException`, `QPCKafkaMsgException`, `QPCReportException`, `RetryExhaustedException`.
 
 ---
 
 ### Task 1.8: Add max.poll.interval.ms and SIGINT config
 
-**Type:** Task
-**Points:** 1
-**Description:**
-Add `KAFKA_CONSUMER_MAXPOLL_INTERVAL` to `config.py` and apply it in `consume.init_consumer()`. Add `SIGINT` handler alongside existing `SIGTERM`. Normalize boolean parsing in `config.py` to use a single convention.
-
-**Acceptance Criteria:**
-- [ ] `KAFKA_CONSUMER_MAXPOLL_INTERVAL` in `config.py` with default 600000
-- [ ] Applied as `max.poll.interval.ms` in consumer connection info
-- [ ] `signal.signal(signal.SIGINT, handle_signal)` added in `app.py`
-- [ ] All boolean config vars use `os.getenv(..., "").lower() in ("true", "t", "yes", "y")`
-- [ ] Remove unused `CONSUMER_ASSIGNMENTS` Info metric
+**Type:** Task | **Points:** 1 | **JIRA:** [27911](https://redhat.atlassian.net/browse/RHINENG-27911) | **Status:** Done — [#796](https://github.com/RedHatInsights/insights-puptoo/pull/796)
 
 ---
 
 ### Task 1.9: Fix puptoo bugs
 
-**Type:** Task
-**Points:** 2
-**Description:**
-Fix remaining known bugs in puptoo as part of the refactoring:
-- Remove dead `clean_macs()` code path at `app.py:244-245` (MAC cleaning handled by `postprocess()`)
-- Fix bare `except:` in `upload.py` (use `except Exception`)
-- Fix bare `except:` in `config.py` Redis password (use `except AttributeError`)
-- Pool MinIO client in `upload.py` (module-level instead of per-upload)
+**Type:** Task | **Points:** 2 | **JIRA:** [27912](https://redhat.atlassian.net/browse/RHINENG-27912) | **Status:** Done — [#797](https://github.com/RedHatInsights/insights-puptoo/pull/797)
 
-**Acceptance Criteria:**
-- [ ] Dead `clean_macs()` guard removed
-- [ ] No bare `except:` remains in the codebase
-- [ ] MinIO client initialized once, not per-upload
-- [ ] All existing tests pass
+Dead `clean_macs()` path, bare `except:` clauses, MinIO client pooling.
 
 ---
 
 ### Task 1.10: Write handler dispatch tests
 
-**Type:** Story
-**Points:** 2
-**Description:**
-Add `tests/test_handlers.py` with tests for handler dispatch, ensuring correct handler selection for each service type and graceful handling of unknown services.
-
-**Acceptance Criteria:**
-- [ ] Tests verify `advisor` -> `AdvisorHandler`
-- [ ] Tests verify `compliance` -> `ComplianceHandler`
-- [ ] Tests verify `malware-detection` -> `ComplianceHandler`
-- [ ] Tests verify `qpc` -> `None` (not yet registered)
-- [ ] Tests verify unknown service -> `None`
+**Type:** Story | **Points:** 2 | **JIRA:** [27913](https://redhat.atlassian.net/browse/RHINENG-27913) | **Status:** Done — [#766](https://github.com/RedHatInsights/insights-puptoo/pull/766)
 
 ---
 
 ### Task 1.11: Verify in ephemeral environment
 
-**Type:** Task
-**Points:** 2
-**Description:**
-Deploy the refactored puptoo to a Bonfire ephemeral environment. Run IQE tests and manually verify advisor/compliance/malware uploads process correctly.
+**Type:** Task | **Points:** 2 | **JIRA:** [27914](https://redhat.atlassian.net/browse/RHINENG-27914) | **Status:** Done — [#791](https://github.com/RedHatInsights/insights-puptoo/pull/791)
 
-**Acceptance Criteria:**
-- [ ] IQE `puptoo` plugin tests pass in ephemeral
-- [ ] At least one advisor upload processed end-to-end (appears in HBI)
-- [ ] No increase in error metrics compared to baseline
+**Phase 1 Total: 27 story points ✅** — Other Sprint 2 work landed alongside: `uv` migration ([27925](https://redhat.atlassian.net/browse/RHINENG-27925), done), pre-commit + ruff ([28038](https://redhat.atlassian.net/browse/RHINENG-28038), done), docker-compose modernization ([28248](https://redhat.atlassian.net/browse/RHINENG-28248), release pending), OpenTelemetry tracing ([28307](https://redhat.atlassian.net/browse/RHINENG-28307), done, merged Jul 10).
 
 ---
 
-**Sprint 1 Total:** 27 story points
+## Phase 1.5 ([28549](https://redhat.atlassian.net/browse/RHINENG-28549)): Infrastructure Investigation — Closed ✅ Jul 23
+
+> [!important] What actually happened here
+> This phase was originally scoped to stand up the new `insights-upload-processor` repo: namespace, Quay, Konflux, app-interface onboarding, CI/CD pipelines. On **2026-07-20** the team reversed that decision and chose to merge in-place into the existing `insights-puptoo` repo instead. Most of this phase's subtasks were closed as **Won't Do** as a direct result. The two subtasks that mattered regardless of repo strategy (naming decisions, PR queue cleanup, prod release) were completed.
+
+| Task | JIRA | Summary | SP | Status |
+|---|---|---|---|---|
+| 1.5.0 | [28665](https://redhat.atlassian.net/browse/RHINENG-28665) | Phase 1 stage verification and production release | 3 | Done ✅ Jul 20 |
+| 1.5.1 | [28550](https://redhat.atlassian.net/browse/RHINENG-28550) | Namespace and consumer group naming decisions | 1 | Done ✅ Jul 13. Decided `upload-processor-stage`/`-prod` namespace and `puptoo-upload-processor`/`yuptoo-upload-processor` groups — **the group names stuck even though the dedicated namespace itself did not** (superseded by the Jul 29 sync's "stay in existing namespace" call) |
+| 1.5.2 | [28551](https://redhat.atlassian.net/browse/RHINENG-28551) | App-interface onboarding for new repo | 3 | **Won't Do** — repo strategy reversed |
+| 1.5.3 | [28552](https://redhat.atlassian.net/browse/RHINENG-28552) | Quay repo + Konflux hermetic build for new repo | 5 | **Won't Do** — repo strategy reversed |
+| 1.5.4 | [27902](https://redhat.atlassian.net/browse/RHINENG-27902) | Pipeline and pr_checks for new repo | 3 | **Won't Do** — repo strategy reversed |
+| 1.5.5 | [28553](https://redhat.atlassian.net/browse/RHINENG-28553) | Push puptoo codebase into new repo | 1 | **Won't Do** — repo strategy reversed, using existing puptoo repo instead |
+| 1.5.6 | [27901](https://redhat.atlassian.net/browse/RHINENG-27901) | Prepare test coverage plan | 2 | Closed by Gael (Jul 22) — replaced by Gael's new IQE + testing Story |
+| 1.5.7 | [28554](https://redhat.atlassian.net/browse/RHINENG-28554) | Automated stage testing | 5 | Closed by Gael (Jul 22) — replaced by Gael's new IQE + testing Story |
+| 1.5.8 | [28555](https://redhat.atlassian.net/browse/RHINENG-28555) | Clean puptoo PR queue (Dependabot + Konflux) | 5 | Done ✅ Jul 17 |
+
+**Phase 1.5 Total: 28 story points, closed 2026-07-23.**
 
 ---
 
-## Sprint 2-3: Port QPC Processing (with A+ Fixes)
+## Phase 2 ([27915](https://redhat.atlassian.net/browse/RHINENG-27915)): Port QPC Processing — In Progress, Pranav owns
 
-### Task 2.1: Create modifier framework with pre-registration
+11 independent Tasks under the epic (not subtasks — restructured Jul 30 after Phase 1.5 hit the same subtask-to-task conversion friction). Live view: [Phase-2_puptoo label filter](https://redhat.atlassian.net/issues/?jql=labels%20%3D%20%22Phase-2_puptoo%22). All 11 are in Sprint 4 (Aug 11/12 - Sep 2), assigned to Pranav.
 
-**Type:** Story
-**Points:** 5
-**Description:**
-Create `src/puptoo/modifiers/` as a top-level modifier framework (not nested under `qpc/`, to allow future advisor-path modifiers). Implement pre-registration pattern that imports and instantiates all modifier classes once at startup, fixing yuptoo's per-host `importlib`/`inspect` overhead. Define correct `Modifier` ABC with `run(self, host: dict, transformed_obj: dict, **kwargs)` signature. Port all 11 QPC modifier classes into `modifiers/qpc/`. Define explicit ordering list.
+| Task | JIRA | Summary | SP | Status |
+|---|---|---|---|---|
+| 2.1 | [27916](https://redhat.atlassian.net/browse/RHINENG-27916) | Modifier framework + 11 QPC modifier classes (pre-registered at startup, not per-host) | 5 | To Do |
+| 2.2 | [27917](https://redhat.atlassian.net/browse/RHINENG-27917) | Port QPC report validators | 3 | To Do |
+| 2.3 | [27919](https://redhat.atlassian.net/browse/RHINENG-27919) | Add QPC config variables (`APP_NAME`, `GROUP_ID`, `ENABLED_HANDLERS`, `INVENTORY_TOPIC`) | 2 | To Do |
+| 2.4 | [27920](https://redhat.atlassian.net/browse/RHINENG-27920) | Add QPC metrics (`puptoo_qpc_*` prefix) | 2 | To Do |
+| 2.5 | [27918](https://redhat.atlassian.net/browse/RHINENG-27918) | Port QPC report processor, with fixes (commit-after-processing, per-report validation messages, `timeout=120`, `INVENTORY_TOPIC` routing) | 5 | Blocked on 2.1, 2.2, 2.3 |
+| 2.6 | [29361](https://redhat.atlassian.net/browse/RHINENG-29361) | Create QPC Kubernetes Deployment (8 pods, second `deployments:` entry on the existing ClowdApp) | 3 | To Do |
+| 2.7 | [29362](https://redhat.atlassian.net/browse/RHINENG-29362) | Add 3 QPC Unleash feature flags (`puptoo.qpc-processing-enabled`, `puptoo.qpc-org-migration`, `puptoo.qpc-hosts-transformation`) | 2 | Blocked on [28933](https://redhat.atlassian.net/browse/RHINENG-28933) (Unleash foundation, in Code Review) |
+| 2.8 | [27921](https://redhat.atlassian.net/browse/RHINENG-27921) | Create QPCHandler | 3 | Blocked on 2.3-2.7 |
+| 2.9 | [27922](https://redhat.atlassian.net/browse/RHINENG-27922) | Wire QPC code to unified exception hierarchy | 1 | Blocked on 2.8 |
+| 2.10 | [27923](https://redhat.atlassian.net/browse/RHINENG-27923) | Port yuptoo test suite (~63 tests) | 5 | Blocked on 2.8, [29012](https://redhat.atlassian.net/browse/RHINENG-29012) (IQE infra) |
+| 2.11 | [27924](https://redhat.atlassian.net/browse/RHINENG-27924) | Verify QPC in ephemeral (multi-deployment + flag checks) | 3 | Blocked on 2.6, 2.7, 2.10 |
 
-**Files created:**
-- `src/puptoo/modifiers/__init__.py` (pre-registration + `get_modifiers()`)
-- `src/puptoo/modifiers/base.py` (corrected `Modifier` ABC)
-- `src/puptoo/modifiers/qpc/` (11 ported modifier classes)
+**Phase 2 Total: 34 story points.**
 
-**Acceptance Criteria:**
-- [ ] All 11 modifier classes exist under `src/puptoo/modifiers/qpc/`
-- [ ] `Modifier` ABC defines `run(self, host: dict, transformed_obj: dict, **kwargs)`
-- [ ] Modifiers pre-registered at startup via `register_modifiers()`, not per-host
-- [ ] Ordering is explicit (e.g., `AddHostFacts` runs last after UUID assignment)
-- [ ] `get_modifiers()` returns pre-instantiated modifier list
-- [ ] All 11 modifier tests pass (ported from yuptoo)
+> [!note] Message filtering strategy resolved (Aug 5): filter-late
+> HBI's `find_existing_host()` already deduplicates by canonical facts at the application level, with a `host_delete_duplicates` background job as a backstop for the narrow race-condition gap (no DB-level unique constraint on `insights_id`). Filter-late (let both old yuptoo and the new hybrid deployment produce during the transition, rely on HBI's existing dedup) requires zero new dedup work from this project. This unblocked 2.8, 2.9, 2.11.
 
----
+> [!note] RHINENG-29012 (Gael's IQE infra dependency) is healthier than its top-level status suggests
+> Investigated all 17 subtasks directly (Aug 5) rather than trusting the "In Progress, no date" parent status. Only Task 12 (hermetic build isolation), Task 14 (end-to-end validation), and Task 15 (cutover to voting pipeline) are genuinely unstarted; the rest are done or in review.
 
-### Task 2.2: Port QPC validators
-
-**Type:** Story
-**Points:** 3
-**Description:**
-Port both yuptoo validators into `src/puptoo/qpc/validators.py`. This includes `validate_qpc_message()` (URL expiry check, required field validation) and `validate_metadata_file()` (metadata.json structure, slice validation, host count).
-
-**Acceptance Criteria:**
-- [ ] `src/puptoo/qpc/validators.py` contains both `validate_qpc_message()` and `validate_metadata_file()`
-- [ ] URL expiry check preserved with `BYPASS_PAYLOAD_EXPIRATION` config
-- [ ] All validator tests pass (ported from yuptoo)
-
----
-
-### Task 2.3: Port QPC report processor (with fixes)
-
-**Type:** Story
-**Points:** 5
-**Description:**
-Port `yuptoo/processor/report_processor.py` into `src/puptoo/qpc/report_processor.py`. Apply the following fixes during port:
-1. Use `mq/produce.send_message()` instead of inline produce calls
-2. Send validation messages per report/slice, not per host (fix yuptoo's spam)
-3. Add `timeout=120` to `download_report()` `requests.get()` call
-4. Use pre-registered modifier pipeline from `modifiers/` instead of per-host import
-5. Keep commit-after-processing semantics (puptoo pattern), not yuptoo's early commit
-
-**Acceptance Criteria:**
-- [ ] `src/puptoo/qpc/report_processor.py` handles: tar download, metadata validation, slice iteration, modifier execution, HBI message production
-- [ ] Uses `mq/produce.send_message()` for Kafka production
-- [ ] Validation message sent once per report, not per host
-- [ ] `download_report()` has `timeout=120` on `requests.get()`
-- [ ] Modifier pipeline uses pre-registered instances, not per-host import
-- [ ] `download_report()` and `has_canonical_facts()` available as utilities
-- [ ] Processor tests pass (ported from yuptoo, updated for new patterns)
+```mermaid
+graph TD
+    FOUND["2.1-2.4 Foundation"] --> E["2.5 Report processor"]
+    INFRA["2.6 Deployment + 2.7 Unleash flags"] --> H["2.8 QPCHandler"]
+    E --> H
+    H --> I["2.9 Exception hierarchy"]
+    H --> J["2.10 Test suite, blocked by RHINENG-29012"]
+    INFRA --> K["2.11 Verify in ephemeral"]
+    J --> K
+```
 
 ---
 
-### Task 2.4: Add QPC configuration variables
+## Phase 3: Stage Deploy, Cutover, Decommission — Draft, not yet created in JIRA
 
-**Type:** Task
-**Points:** 2
-**Description:**
-Add yuptoo-specific configuration to `src/puptoo/utils/config.py`:
-- `MAX_HOSTS_PER_REP` (default 10000)
-- `HOSTS_TRANSFORMATION_ENABLED` (default True)
-- `KAFKA_PRODUCER_OVERRIDE_MAX_REQUEST_SIZE` (default 2097152)
-- `DISCOVERY_HOST_TTL` (default '29')
-- `SATELLITE_HOST_TTL` (default '29')
-- `BYPASS_PAYLOAD_EXPIRATION` (default False)
+> [!important] This is a proposal, not a committed estimate
+> Drafted 2026-08-05 from the original cutover plan plus the dormant repo's eventual rename. **When this is created in JIRA, structure it as independent Tasks directly under Epic RHINENG-27899, not subtasks under a parent Story** — Phase 1.5 and Phase 2 both had to be converted from subtasks to tasks later once real Story Points were needed. Skip that conversion step entirely.
 
-**Acceptance Criteria:**
-- [ ] All 6 config variables present with correct defaults
-- [ ] Logged by `log_config()` when puptoo starts
-- [ ] No impact on existing config variables
+All work targets the **existing** `insights-puptoo` repo and the **existing** `stage-ingress-stage`/prod namespace — no new namespace, per the Jul 29 sync (7 attendees incl. Jaylin, Ondrej): "stay in the existing namespace, no new one."
 
----
+| Task | Summary | SP (draft) | Depends on | Note |
+|---|---|---|---|---|
+| 3.1 | Stage deployment: add a **second `deployments:` entry** to the existing `insights-puptoo` ClowdApp (today's `deployment.yaml` has one, `processor`), so the merged image runs as two independent Deployments in place — `puptoo` mode at 64 replicas, `yuptoo` mode at 8, each pinning its own entry-point env var | 3 | 2.11 passes | Namespace question closed (Jul 29 sync); Ondrej described this exact multi-deployment mechanism in that same meeting |
+| 3.2 | Stage validation: compare old-yuptoo vs. new-merged output, IQE suites pass, no metric regression | 3 | 3.1 | |
+| 3.3 | Dashboard migration: Grafana pointed at consolidated metrics module | 2 | 3.1 | **Open dependency:** the `rh.service` OTel span attribute is hardcoded to `"puptoo"`. Whether `APP_NAME` parameterizes it for distinct service identification is unresolved — raise before sizing further |
+| 3.4 | Documentation: runbooks and on-call docs updated | 2 | none | Can start anytime |
+| 3.5 | Production deployment + monitoring window | 2 | 3.2 sign-off | |
+| 3.6 | Grace period: yuptoo scaled to zero, zero consumer lag confirmed | 1 | 3.5 | 1-2 weeks of elapsed calendar time, not effort — cannot be compressed |
+| 3.7 | Yuptoo decommission: remove from app-interface, team sign-off, archive old `yuptoo` repo | 2 | 3.6 | |
+| 3.8 | Final repo rename: activate `insights-upload-processor`, update CI/CD + app-interface references, **including the namespace switch itself** (the one point where a namespace change was always intended, deferred here rather than done at 3.1) | 3 (tentative) | 3.7 (or parallel) | **Open scope/ownership decision**: may end up as a separate initiative outside the consolidation epic rather than a Phase 3 item. Decide when Phase 3 nears execution |
 
-### Task 2.5: Add QPC metrics
+**Phase 3 draft total: 15 SP firm (3.1-3.7) + 3 tentative (3.8) = 15-18 SP.**
 
-**Type:** Task
-**Points:** 2
-**Description:**
-Add yuptoo's metrics to `src/puptoo/utils/metrics.py`:
-- `archive_downloaded_success` (Counter)
-- `archive_failed_to_download` (Counter)
-- `extract_report_slices_failures` (Counter)
-- `report_processing_exceptions` (Counter)
-- `host_uploaded` (Counter)
-- `host_upload_failures` (Counter)
-- `incoming_hosts_counter` (Counter, labeled by `source`)
-
-Prefix all with `puptoo_qpc_` to distinguish from existing puptoo metrics.
-
-**Acceptance Criteria:**
-- [ ] All 7 metrics defined with `puptoo_qpc_` prefix
-- [ ] Existing puptoo metrics unchanged
-- [ ] QPC code references the new metrics correctly
-
----
-
-### Task 2.6: Create QPCHandler
-
-**Type:** Story
-**Points:** 3
-**Description:**
-Create `src/puptoo/handlers/qpc.py` implementing `QPCHandler(BaseHandler)`. This handler:
-1. Calls `validate_qpc_message()` to extract `request_obj`
-2. Calls `process_report()` to download, validate, and process the QPC tar archive
-3. Handles `QPCKafkaMsgException`, `FailExtractException`, and general exceptions with appropriate metrics and logging
-
-Register `qpc` in the handler dispatch registry.
-
-**Acceptance Criteria:**
-- [ ] `QPCHandler` exists and is registered for `service == 'qpc'`
-- [ ] Full QPC processing pipeline executes through the handler
-- [ ] Error handling matches yuptoo's behaviour (metrics, logging, no crash)
-- [ ] Handler dispatch tests updated to verify `qpc` -> `QPCHandler`
-
----
-
-### Task 2.7: Wire QPC code to unified exception hierarchy
-
-**Type:** Task
-**Points:** 1
-**Description:**
-QPC exception classes were already created in `src/puptoo/exceptions.py` (Task 1.7). Update all ported QPC code (`report_processor.py`, `validators.py`, `QPCHandler`) to import from the unified `exceptions.py` rather than yuptoo's `lib/exceptions.py`. Ensure each exception type triggers the correct metric and tracker/validation message.
-
-**Acceptance Criteria:**
-- [ ] All QPC code imports from `src.puptoo.exceptions`
-- [ ] No yuptoo exception imports remain
-- [ ] Each exception type maps to the correct metric counter
-- [ ] `QPCKafkaMsgException` -> `kafka_failures` metric
-- [ ] `FailExtractException` -> `extract_report_slices_failures` metric
-
----
-
-### Task 2.8: Port yuptoo test suite
-
-**Type:** Story
-**Points:** 5
-**Description:**
-Port all yuptoo tests into `tests/qpc/`. Update imports to use puptoo's package structure. Verify all tests pass in the merged codebase.
-
-**Test files to port:**
-- 11 modifier tests -> `tests/qpc/modifiers/`
-- 2 processor tests -> `tests/qpc/`
-- 2 validator tests -> `tests/qpc/`
-- Test utilities (`tests/utils.py`) -> merge into existing test utils
-
-**Acceptance Criteria:**
-- [ ] All 63 yuptoo tests pass under `tests/qpc/`
-- [ ] All 67 existing puptoo tests still pass
-- [ ] `pytest` discovers and runs all ~130 tests
-- [ ] No import errors or path issues
-
----
-
-### Task 2.9: Migrate to uv and update dependencies
-
-**Type:** Story
-**Points:** 3
-**Description:**
-Migrate puptoo's dependency management from Poetry to `uv` (team-preferred tooling). Yuptoo has an upstream `pipenv_to_uv` branch in progress; leverage that work where possible. Remove `poetry.lock` and Poetry-specific config from `pyproject.toml`. Add any yuptoo dependencies not already present (`pytest-cov` dev dependency, align `requests` version). Verify `insights-core` 3.7.6 (puptoo's version) is compatible with yuptoo's code. Update the Dockerfile to use `uv` for installs.
-
-**Acceptance Criteria:**
-- [ ] `pyproject.toml` uses standard PEP 621 metadata (no `[tool.poetry]` section)
-- [ ] `uv lock` succeeds and produces `uv.lock`
-- [ ] `poetry.lock` removed
-- [ ] All dependencies from both puptoo and yuptoo are present
-- [ ] Dockerfile updated to install via `uv pip install` or `uv sync`
-- [ ] `uv run pytest` passes all tests
-- [ ] No import errors in ported code
-
----
-
-### Task 2.10: Verify QPC processing in ephemeral
-
-**Type:** Task
-**Points:** 3
-**Description:**
-Deploy the merged puptoo (with QPC handler) to a Bonfire ephemeral environment. Upload a QPC tar payload and verify end-to-end processing: message consumption, tar extraction, metadata validation, modifier execution, HBI host creation.
-
-**Acceptance Criteria:**
-- [ ] QPC payload processed without errors
-- [ ] Hosts appear in HBI
-- [ ] Advisor uploads still process correctly (regression)
-- [ ] QPC metrics visible on `/metrics` endpoint
-
----
-
-**Sprint 2-3 Total:** 30 story points
-
----
-
-## Sprint 4: Deployment and Cutover
-
-### Task 3.1: Create multi-deployment app-interface configuration
-
-**Type:** Story
-**Points:** 3
-**Description:**
-Create app-interface deployment configurations for the multi-deployment architecture. The merged service runs as two separate Deployments of the same container image, each with distinct `ENABLED_HANDLERS` and consumer group configuration.
-
-**Deployment A (puptoo):**
-- Replicas: 64 (matches current puptoo-processor)
-- `ENABLED_HANDLERS=advisor,compliance,malware-detection`
-- Consumer group: `puptoo-processor` (existing)
-- Resource limits: 100m CPU / 256Mi memory (current puptoo limits)
-- IQE plugin: `puptoo`
-
-**Deployment B (yuptoo):**
-- Replicas: 8 (matches current yuptoo)
-- `ENABLED_HANDLERS=qpc`
-- Consumer group: `qpc-group` (existing)
-- Resource limits: 500m CPU / 1Gi memory (current yuptoo limits)
-- IQE plugin: `foreman-rh-cloud`
-
-**Acceptance Criteria:**
-- [ ] Two ClowdApp Deployment entries in app-interface using the same image tag
-- [ ] Each deployment has correct `ENABLED_HANDLERS`, consumer group, and resource limits
-- [ ] Both IQE test plugins mapped to their respective deployments
-- [ ] Manifest validates without errors
-- [ ] HPA configuration independent per deployment
-
----
-
-### Task 3.2: Stage deployment and regression testing
-
-**Type:** Task
-**Points:** 3
-**Description:**
-Deploy merged puptoo to stage. Run IQE tests for both plugins. Verify advisor/compliance/malware processing is unaffected. Test QPC payloads end-to-end.
-
-**Acceptance Criteria:**
-- [ ] IQE `puptoo` tests pass in stage
-- [ ] IQE `foreman-rh-cloud` tests pass in stage
-- [ ] No regression in advisor/compliance/malware metrics
-- [ ] QPC test payloads processed successfully
-
----
-
-### Task 3.3: Production deployment
-
-**Type:** Task
-**Points:** 2
-**Description:**
-Deploy merged puptoo to production. Monitor for errors, metric anomalies, and consumer lag.
-
-**Acceptance Criteria:**
-- [ ] Deployment successful
-- [ ] Advisor/compliance/malware metrics stable for 24 hours
-- [ ] QPC processing metrics confirm host uploads
-- [ ] No increase in error rates
-
----
-
-### Task 3.4: Decommission yuptoo
-
-**Type:** Task
-**Points:** 2
-**Description:**
-Scale yuptoo replicas to 0 in production. Monitor the `qpc-group` consumer group for lag (should show no new messages). After 1-2 weeks grace period, remove the yuptoo ClowdApp entirely.
-
-**Acceptance Criteria:**
-- [ ] Yuptoo replicas at 0
-- [ ] `qpc-group` consumer group shows zero lag for 1 week
-- [ ] No alerts triggered by yuptoo absence
-- [ ] Yuptoo ClowdApp removed from app-interface
-
----
-
-### Task 3.5: Archive yuptoo repository
-
-**Type:** Task
-**Points:** 1
-**Description:**
-Archive the yuptoo repository on GitHub. Update the README to indicate the service has been merged into puptoo with a link to the merged codebase.
-
-**Acceptance Criteria:**
-- [ ] Repository marked as archived (read-only)
-- [ ] README updated with deprecation notice and redirect
-- [ ] Internal documentation updated to reference merged puptoo
-
----
-
-### Task 3.6: Update monitoring and documentation
-
-**Type:** Task
-**Points:** 2
-**Description:**
-Update Grafana dashboards to include QPC metrics from puptoo. Remove yuptoo-specific dashboards. Update runbooks and on-call documentation to reflect the merged service.
-
-**Acceptance Criteria:**
-- [ ] QPC metrics visible on puptoo dashboard
-- [ ] Yuptoo dashboard archived or removed
-- [ ] Runbooks updated for combined service
-- [ ] On-call documentation reflects single service
-
----
-
-**Sprint 4 Total:** 13 story points
+**Calendar note, independent of story points:** Phase 3's milestone chain (stage validation → prod deploy → monitoring → **1-2 week grace period** → decommission) takes real elapsed calendar time that additional bandwidth cannot compress.
 
 ---
 
 ## Summary
 
-| Sprint | Focus                                    | Story Points |
-| ------ | ---------------------------------------- | ------------ |
-| 1      | Refactor puptoo + A+ infrastructure      | 27           |
-| 2-3    | Port QPC processing (with fixes)         | 30           |
-| 4      | Deployment and cutover                   | 13           |
-| **Total** |                                       | **70**       |
+| Phase | Focus | Story Points | Status |
+|---|---|---|---|
+| 1 | Refactor puptoo + A+ infrastructure | 27 | ✅ Complete (Jul 7, prod release Jul 20) |
+| 1.5 | Infrastructure investigation → repo strategy reversed | 28 | ✅ Closed Jul 23 |
+| 2 | Port QPC processing | 34 | In Progress, 0 delivered as of Aug 5 |
+| 3 | Stage deploy, cutover, decommission | 15-18 (draft) | Not yet in JIRA |
+| **Total (known scope)** | | **~104-107** | |
 
-> [!NOTE]
-> The 8-point increase over vanilla Strategy A (62 -> 70) reflects the typed exceptions, `mq/auth.py`, `send_message()` relocation, bug fixes, and modifier framework improvements. These are one-time costs that yield permanent architectural quality.
-
-### Dependency Graph
-
-```
-Sprint 1:
-1.1 ──► 1.2 ──► 1.4 ──► 1.10 ──► 1.11
-   │         ▲
-   └──► 1.3 ─┘
-1.5 ──► 1.6            (auth.py before send_message move)
-1.7 (independent)       (typed exceptions)
-1.8 (independent)       (max.poll + SIGINT + bool normalization)
-1.9 (independent)       (puptoo bug fixes)
-
-Sprint 2-3:
-2.1 ──► 2.3 ──► 2.6 ──► 2.8 ──► 2.10
-2.2 ──► 2.3     ▲
-2.4 ────────────┘
-2.5 ────────────┘
-2.7 ──► 2.6
-2.9 (independent, do early)
-
-Sprint 4:
-3.1 ──► 3.2 ──► 3.3 ──► 3.4 ──► 3.5
-                              └──► 3.6
-```
+> [!note] Not the same 70 SP as the original slide-deck estimate
+> The original proposal estimated 4 sprints / 70 SP. Actual scope grew once each phase was genuinely sized: Phase 1.5 didn't exist in the original plan at all (0 → 28 SP), Phase 2 grew from a 30 SP guess to 34 SP once broken into 11 real tasks, and Phase 3's 13 SP guess (4+ sprints old, never revisited until Aug 5) is now a 15-18 SP draft. This is normal estimate refinement, not scope creep — the underlying architecture (Strategy A+, in-place merge, multi-deployment) hasn't changed since the proposal.
 
 ---
 
@@ -543,20 +204,24 @@ Sprint 4:
 The two services write to **different** HBI ingress topics:
 
 | Service | Config variable | Actual topic |
-|---------|----------------|--------------|
+|---|---|---|
 | Puptoo | `INVENTORY_TOPIC` | `host-ingress-p1` |
-| Yuptoo | `UPLOAD_TOPIC` | `platform.inventory.host-ingress` |
+| Yuptoo | `INVENTORY_TOPIC` (yuptoo-mode value) | `platform.inventory.host-ingress` |
 
-The merged service handler dispatch must route produce calls to the correct topic based on handler type (advisor/compliance/malware vs qpc). This should be addressed in the QPCHandler task (2.6) or as a separate sub-task.
+Resolved via the `INVENTORY_TOPIC` env var per deployment (task 2.3), not a code branch. Folded into 2.3 (config) and 2.5 (report processor), Jul 30.
 
 ### IQE Plugin Co-location
 
-The yuptoo IQE plugin lives at `gitlab.cee.redhat.com/insights-qe/iqe-foreman-rh-cloud-plugin`. Consider migrating IQE plugins into the merged repo (as HBI did) for tighter integration. This is optional but recommended by the project sponsor (Ondrej). If pursued, add as a Sprint 4 task.
+**Confirmed (Jul 27 sync):** the puptoo IQE plugin moves from GitLab into the GitHub repo (same pattern as HBI); puptoo + yuptoo IQE tests merge into one plugin. Two pipelines run in parallel during migration (existing GitLab pipeline untouched, new GitHub pipeline alongside). Tests stay collocated with app code, built gradually per JIRA/feature. Gael has a PR in progress building the new Bonfire/Tekton pipelines — tracked under [RHINENG-29012](https://redhat.atlassian.net/browse/RHINENG-29012).
 
-### `uv` Migration: Decouple from Merge
+### `uv` Migration — Done
 
-Task 2.9 (migrate to `uv`) should be a **separate effort**, done before or after the merge, not during. Getting both repos as similar as possible before porting reduces merge risk. Track as an independent JIRA outside this Epic. (Agreed: Gael + Pranav, Jun 22)
+Completed as [RHINENG-27925](https://redhat.atlassian.net/browse/RHINENG-27925), [#765](https://github.com/RedHatInsights/insights-puptoo/pull/765), independent of the merge as originally planned.
 
-### HBI Reporter Name Change
+### HBI Reporter Name — Resolved
 
-The merged service's reporter name is part of the `host_events` spec in Host Inventory (HBI). Renaming the service (from "puptoo"/"yuptoo" to the new name) will require corresponding changes in HBI itself. Add as a Sprint 4 subtask under Task 3.1 (deployment manifest) or as a separate cross-team story.
+**Decided Scenario A** (Jul 14): keep existing reporter names (`puptoo`/`yuptoo`), no HBI-side changes needed. Full analysis in [HBI_Reporter_Impact_Analysis.md](archive/HBI_Reporter_Impact_Analysis.md) (historical, decision already applied).
+
+### Environment Variables vs. Feature Flags
+
+**Resolved (Jul 28, Gael):** `ENABLED_HANDLERS`/`GROUP_ID` env vars control per-pod topology (which handlers a deployment runs). Three Unleash flags control runtime behavior: `puptoo.qpc-processing-enabled` (kill switch), `puptoo.qpc-org-migration` (gradual rollout), `puptoo.qpc-hosts-transformation`. Foundation PR: [#847](https://github.com/RedHatInsights/insights-puptoo/pull/847).

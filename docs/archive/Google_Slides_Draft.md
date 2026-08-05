@@ -4,6 +4,9 @@
 
 Use this document as the source of truth for slide content. Each section is one slide.
 
+> [!note] Historical document (frozen)
+> This was the working draft used to build the stakeholder presentation for project kickoff (June 2026). It is not updated as the project evolves. For current status, see [README.md](../../README.md) or JIRA epic [RHINENG-27899](https://redhat.atlassian.net/browse/RHINENG-27899).
+
 **To render Mermaid diagrams as PNG:** Go to [mermaid.live](https://mermaid.live), paste the Mermaid code, download as PNG, insert into slide.
 
 ---
